@@ -15,8 +15,8 @@ pipeline runs offline with no numpy/pandas; the per-quantity fusion uses
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Mapping, Sequence
 
 from ..constants import NOWCAST_GRID_DT_S
 from ..types import QCFlag, Quantity
@@ -168,7 +168,7 @@ def run_fusion(
 
     # --- group records by quantity, then by source; place on the grid ---
     by_quantity: dict[str, dict[str, list]] = {}
-    for source_id, recs in streams.items():
+    for _source_id, recs in streams.items():
         for r in recs:
             by_quantity.setdefault(r.quantity, {}).setdefault(
                 r.source_id, []

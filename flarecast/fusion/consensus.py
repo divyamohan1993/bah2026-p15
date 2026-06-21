@@ -25,8 +25,8 @@ Pure standard library; catalogue entries are plain dicts and a "DF" is a list of
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Mapping, Sequence
 
 from ..constants import (
     CONSENSUS_CANDIDATE_THRESH,

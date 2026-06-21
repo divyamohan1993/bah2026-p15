@@ -31,7 +31,7 @@ library** (no numpy) -- fully testable offline. numpy is never imported here.
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 from ..constants import KALMAN_GATE_CHI2
 
@@ -101,7 +101,7 @@ def inverse_variance_fuse(
 
     w_sum = 0.0
     wx_sum = 0.0
-    for x, s, r in zip(values, sigmas, rels):
+    for x, s, r in zip(values, sigmas, rels, strict=True):
         if not (s > 0.0):
             raise ValueError(
                 f"inverse_variance_fuse: sigma must be > 0 (got {s!r})"

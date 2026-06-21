@@ -25,7 +25,7 @@ required); fully testable offline.
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 from ..constants import (
     QC_BAD,

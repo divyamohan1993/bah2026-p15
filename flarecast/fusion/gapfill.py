@@ -25,8 +25,8 @@ Pure standard library; operates on the :class:`~flarecast.fusion.timesync.GridSe
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Sequence
 
 from ..constants import QC_FILLED
 from ..types import QCBit, QCFlag

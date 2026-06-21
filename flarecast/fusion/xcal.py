@@ -26,7 +26,7 @@ Implemented in **pure standard library** least squares (the published anchor is
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 __all__ = [
     "fit_transfer_function",
@@ -229,10 +229,10 @@ def _wls_line(
     sw = sum(w)
     if sw <= 0.0:
         return 0.0, 1.0
-    sx = sum(wi * xi for wi, xi in zip(w, x))
-    sy = sum(wi * yi for wi, yi in zip(w, y))
-    sxx = sum(wi * xi * xi for wi, xi in zip(w, x))
-    sxy = sum(wi * xi * yi for wi, xi, yi in zip(w, x, y))
+    sx = sum(wi * xi for wi, xi in zip(w, x, strict=True))
+    sy = sum(wi * yi for wi, yi in zip(w, y, strict=True))
+    sxx = sum(wi * xi * xi for wi, xi in zip(w, x, strict=True))
+    sxy = sum(wi * xi * yi for wi, xi, yi in zip(w, x, y, strict=True))
     denom = sw * sxx - sx * sx
     if abs(denom) < 1e-30:
         # Degenerate (all x equal): fall back to unit slope through the mean.

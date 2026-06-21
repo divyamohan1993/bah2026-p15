@@ -29,8 +29,8 @@ Pure standard library (the math is scalar/3-vector).
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from ..constants import C_KM_S
 
@@ -104,7 +104,7 @@ def baseline_km(
 ) -> float:
     """Euclidean distance between two HCI positions [km]."""
     return math.sqrt(
-        sum((a - b) ** 2 for a, b in zip(xyz1, xyz2))
+        sum((a - b) ** 2 for a, b in zip(xyz1, xyz2, strict=True))
     )
 
 
@@ -191,7 +191,9 @@ def localize_burst(trigger_table: Sequence[TriggerObservation]) -> list[Annulus]
             dt = o2.t_arrival_s - o1.t_arrival_s
             sigma_dt = math.hypot(o1.sigma_t_s, o2.sigma_t_s)
             # Baseline direction = unit vector from o1 toward o2.
-            diff = tuple(b - a for a, b in zip(o1.xyz_hci_km, o2.xyz_hci_km))
+            diff = tuple(
+                b - a for a, b in zip(o1.xyz_hci_km, o2.xyz_hci_km, strict=True)
+            )
             ann = ipn_annulus(dt, d12, sigma_dt, _xyz_to_lon_lat(diff))
             ann.pair = (o1.source_id, o2.source_id)
             annuli.append(ann)
