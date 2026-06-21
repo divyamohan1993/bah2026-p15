@@ -1,0 +1,83 @@
+#:schema node_modules/wrangler/config-schema.json
+# Aditya FlareCast — Cloudflare edge Worker configuration
+# (ARCHITECTURE.md Section 7.1 / Appendix A `edge/`).
+#
+# This Worker is the O(1) production target: a Cron Trigger pulls the NOAA SWPC
+# GOES XRS JSON each minute (`scheduled()` -> src/cron.ingestOnce), routes the
+# newest soft-band sample to the per-stream Detector Durable Object (the
+# strongly-consistent EMA+CUSUM state, src/detector.DetectorDO), and serves
+# O(1) KV reads + a Hibernatable WebSocket live stream (src/index.ts).
+#
+# The bindings below MUST match the names declared in src/index.ts /
+# src/cron.ts / src/detector.ts:
+#   FLARE_KV  (KVNamespace)            -> latest:/alert:/forecast: hot cache
+#   FLARE_DB  (D1Database)             -> flare_catalogue (see schema.sql)
+#   FLARE_R2  (R2Bucket)               -> raw FITS / Parquet / ONNX artifacts
+#   DETECTOR  (DurableObjectNamespace) -> class DetectorDO (per-stream detector)
+#
+# Placeholder ids below MUST be replaced with the real ids printed when you
+# create each resource (see edge/README.md). `wrangler` will not deploy until
+# the KV `id` and D1 `database_id` are real.
+
+name = "aditya-flarecast-edge"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# Cron Triggers: fire scheduled() every minute to match the ~1-min SWPC cadence
+# (ARCHITECTURE.md Section 7.1 "Cron pulls SWPC JSON ... each cadence").
+[triggers]
+crons = ["* * * * *"]
+
+# Optional override for the SWPC endpoint (staging/tests). Defaults in code to
+# the public 1-day XRS feed (src/constants.SWPC_XRAYS_URL) when unset.
+[vars]
+# SWPC_XRAYS_URL = "https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json"
+
+# --- Workers KV: O(1) hot cache (latest:/alert:/forecast:) ------------------
+# Create with:  wrangler kv namespace create FLARE_KV
+# then paste the printed id below (and a preview_id from
+# `wrangler kv namespace create FLARE_KV --preview` for `wrangler dev`).
+[[kv_namespaces]]
+binding = "FLARE_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"          # <- from `wrangler kv namespace create FLARE_KV`
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"    # <- from `... --preview`
+
+# --- D1: queryable catalogue (system of record / analytics path) ------------
+# Create with:  wrangler d1 create aditya-flarecast-db
+# then paste the printed database_id below, and load the DDL with:
+#   wrangler d1 execute FLARE_DB --remote --file schema.sql
+[[d1_databases]]
+binding = "FLARE_DB"
+database_name = "aditya-flarecast-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"  # <- from `wrangler d1 create aditya-flarecast-db`
+
+# --- R2: bulk / raw object store (no egress fees) ---------------------------
+# Create with:  wrangler r2 bucket create aditya-flarecast-raw
+[[r2_buckets]]
+binding = "FLARE_R2"
+bucket_name = "aditya-flarecast-raw"
+
+# --- Durable Object: per-stream online detector (O(1) state) ----------------
+# `class_name` MUST match the exported class in src/detector.ts (re-exported
+# from src/index.ts so the migration can bind it).
+[[durable_objects.bindings]]
+name = "DETECTOR"
+class_name = "DetectorDO"
+
+# DetectorDO uses the Hibernatable WebSocket API + SQLite-backed DO storage
+# (state.acceptWebSocket / state.storage), so it is registered as a SQLite DO
+# class. `new_sqlite_classes` is required for the hibernation + SQL storage
+# backend on a brand-new class.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DetectorDO"]
+
+# --- Workers AI: edge forecast inference (ARCHITECTURE.md Section 7.1) -------
+# Uncomment to bind Workers AI once an ONNX/AI forecast model is wired in
+# (the LightGBM/TCN tier). The detection hot path does not need it.
+# [ai]
+# binding = "AI"
+
+# --- Observability ----------------------------------------------------------
+[observability]
+enabled = true

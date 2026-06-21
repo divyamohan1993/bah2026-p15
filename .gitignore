@@ -1,0 +1,75 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging / build
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Test / lint / type caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+.env.*
+*.local
+
+# ---------------------------------------------------------------------------
+# Data caches (large science artifacts — keep only small bundled samples)
+# ---------------------------------------------------------------------------
+data/
+*.fits
+*.fits.gz
+*.cdf
+*.nc
+*.netcdf
+*.parquet
+*.onnx
+# Keep the small, deterministic bundled samples used by the offline demo/tests.
+!examples/data/
+!examples/data/**
+
+# ---------------------------------------------------------------------------
+# Node / Cloudflare edge (edge/ workstream)
+# ---------------------------------------------------------------------------
+node_modules/
+.wrangler/
+.dev.vars
+dist-edge/
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Editor / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aditya FlareCast &mdash; solar-flare nowcast &amp; forecast</title>
+  <meta name="description"
+        content="Aditya FlareCast: soft + hard X-ray solar-flare nowcasting and forecasting dashboard (ISRO BAH 2026, PS-15)." />
+  <!--
+    SELF-CONTAINED, OFFLINE dashboard. No external CDN, no build step, no
+    framework: vanilla HTML + CSS + JS drawing on <canvas>. It polls the real
+    /api/* endpoints and (optionally) subscribes to /api/stream (SSE) when
+    present, degrading gracefully when any endpoint is missing. See
+    vendor/README.md for how Plotly can be dropped in when online for richer
+    charts. ARCHITECTURE.md Section 8.
+  -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">&#9728;</span>
+      <div class="brand-text">
+        <h1>Aditya FlareCast</h1>
+        <p class="subtitle">Soft + hard X-ray solar-flare nowcasting &amp; forecasting &middot; ISRO BAH 2026 (PS-15)</p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="conn-dot" class="dot dot-unknown" title="connection status"></span>
+      <span id="conn-label">connecting&hellip;</span>
+      <span id="data-source" class="badge"></span>
+    </div>
+  </header>
+
+  <!-- ALERT BANNER: hidden until a flare is nowcast/forecast triggered. -->
+  <div id="alert-banner" class="alert-banner hidden" role="alert" aria-live="assertive">
+    <span class="alert-icon" aria-hidden="true">&#9888;</span>
+    <span id="alert-text" class="alert-text">No active flare alert</span>
+    <span id="alert-meta" class="alert-meta"></span>
+  </div>
+
+  <main class="grid">
+    <!-- Dual light-curve plot. -->
+    <section class="card card-wide">
+      <div class="card-head">
+        <h2>X-ray light curves</h2>
+        <div class="legend" id="lc-legend">
+          <span class="legend-item"><i class="swatch swatch-soft"></i> SoLEXS soft (1&ndash;8 &#8491;, W m&#8315;&sup2;)</span>
+          <span class="legend-item"><i class="swatch swatch-hard"></i> HEL1OS hard (counts s&#8315;&sup1;)</span>
+        </div>
+      </div>
+      <canvas id="lc-canvas" class="plot" width="1000" height="420"
+              role="img" aria-label="Dual soft and hard X-ray light curves"></canvas>
+      <p class="hint">Soft flux on a log scale with GOES A&ndash;X colour bands; hard counts on a linear axis (right).</p>
+    </section>
+
+    <!-- Forecast gauge. -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Forecast</h2>
+        <select id="horizon-select" class="horizon-select" title="forecast horizon">
+          <option value="5">next 5 min</option>
+          <option value="15">next 15 min</option>
+          <option value="30" selected>next 30 min</option>
+          <option value="60">next 60 min</option>
+          <option value="120">next 120 min</option>
+        </select>
+      </div>
+      <canvas id="gauge-canvas" class="gauge" width="260" height="180"
+              role="img" aria-label="Flare probability gauge"></canvas>
+      <div class="gauge-readout">
+        <div class="readout-row">
+          <span class="readout-label">P(flare)</span>
+          <span id="prob-value" class="readout-value">&mdash;</span>
+        </div>
+        <div class="readout-row">
+          <span class="readout-label">threshold</span>
+          <span id="threshold-value" class="readout-value">&ge;C</span>
+        </div>
+        <div class="readout-row">
+          <span class="readout-label">lead time</span>
+          <span id="lead-value" class="readout-value">&mdash;</span>
+        </div>
+        <div class="readout-row">
+          <span class="readout-label">model</span>
+          <span id="model-value" class="readout-value">&mdash;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Latest readouts. -->
+    <section class="card">
+      <div class="card-head"><h2>Latest sample</h2></div>
+      <div class="readout-grid">
+        <div class="stat">
+          <span class="stat-label">soft flux</span>
+          <span id="soft-flux" class="stat-value">&mdash;</span>
+          <span class="stat-unit">W m&#8315;&sup2;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">GOES class</span>
+          <span id="goes-class" class="stat-value class-pill">&mdash;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">hard counts</span>
+          <span id="hard-counts" class="stat-value">&mdash;</span>
+          <span class="stat-unit">cts s&#8315;&sup1;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">data quality</span>
+          <span id="data-quality" class="stat-value">&mdash;</span>
+        </div>
+      </div>
+      <div class="bandkey" id="bandkey" aria-hidden="true"></div>
+    </section>
+
+    <!-- Recent flares catalogue. -->
+    <section class="card card-wide">
+      <div class="card-head">
+        <h2>Recent flares</h2>
+        <span id="cat-count" class="badge">0 events</span>
+      </div>
+      <div class="table-wrap">
+        <table class="cat-table" id="cat-table">
+          <thead>
+            <tr>
+              <th>start</th><th>peak</th><th>end</th>
+              <th>class</th><th>conf</th>
+              <th>soft</th><th>hard</th><th>Neupert</th>
+            </tr>
+          </thead>
+          <tbody id="cat-tbody">
+            <tr class="empty-row"><td colspan="8">no catalogued flares yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Offline reference dashboard &middot; same detector math as the Cloudflare edge.</span>
+    <span>API base: <code id="api-base-label">/api</code> &middot; <a href="/docs">API docs</a></span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

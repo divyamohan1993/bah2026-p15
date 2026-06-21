@@ -1,0 +1,75 @@
+name: CI
+
+# Run on every push and pull request (ARCHITECTURE.md Appendix C — tests are a
+# first-class deliverable; the cross-substrate parity check is a hard gate).
+on: [push, pull_request]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # --- Python reference implementation: lint + full test suite --------------
+  python:
+    name: python (lint + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        # Install the package with its ml/api/dev extras, then ALSO install the
+        # core scientific stack + tooling explicitly. The explicit line is a
+        # belt-and-braces guard so the CI env matches local even if an extra is
+        # reorganised: numpy/pandas/scipy/scikit-learn/lightgbm/fastapi/uvicorn/
+        # httpx/ruff/pytest are all present. httpx in particular is required by
+        # fastapi/starlette's TestClient (tests/test_api.py) -- without it that
+        # module ERRORS at collection instead of running. ruff is pinned to
+        # match local for reproducible lint. `torch` is intentionally NOT
+        # installed here (heavy, optional TCN challenger) -> its 2 tests skip,
+        # as they do locally.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[ml,api,dev]"
+          pip install numpy pandas scipy scikit-learn lightgbm fastapi uvicorn httpx "ruff==0.15.8" pytest
+
+      - name: Lint (ruff)
+        run: ruff check flarecast tests
+
+      - name: Test (pytest)
+        run: python -m pytest -q
+
+  # --- Cloudflare edge: cross-substrate parity (hard) + typecheck (optional) -
+  edge:
+    name: edge (parity + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parity check (hard — edge detector must match the Python golden)
+        # Pure Node ESM, no install needed. Exits non-zero on any mismatch.
+        run: node edge/test/parity.mjs
+
+      - name: Typecheck (optional)
+        # Best-effort: needs npm install (network). Non-blocking so a registry
+        # hiccup never fails CI; the parity check above is the real gate.
+        continue-on-error: true
+        run: |
+          cd edge
+          npm install
+          npm run typecheck

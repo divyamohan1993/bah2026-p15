@@ -1,0 +1,18 @@
+{
+  "name": "aditya-flarecast-edge",
+  "version": "0.1.0",
+  "description": "Aditya FlareCast — Cloudflare edge Worker (Cron + Durable Object + KV + D1 + R2). The O(1) production target; same detector math as the Python reference (ARCHITECTURE.md Section 7).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/parity.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240925.0",
+    "typescript": "^5.6.2",
+    "wrangler": "^3.78.0"
+  }
+}
