@@ -8,6 +8,8 @@ dashboard consumes (``flarecast/dashboard/app.js``).
 
 FastAPI is optional, so the whole module is skipped when it is not installed
 (``pytest.importorskip("fastapi")``); the core offline suite never needs it.
+``httpx`` is required by FastAPI/Starlette's ``TestClient`` (it raises at import
+time otherwise), so we skip on it too rather than letting collection ERROR.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from __future__ import annotations
 import pytest
 
 pytest.importorskip("fastapi")
+pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from flarecast.api.app import create_app  # noqa: E402
