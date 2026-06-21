@@ -48,16 +48,27 @@ the O(1) complexity justification — see **[ARCHITECTURE.md](ARCHITECTURE.md)**
 ## Quickstart (offline demo)
 
 ```bash
-# 1. Install the minimal offline core (numpy, pandas, scipy):
-pip install -e .
+# 1. Install with the forecaster + serving extras (recommended):
+pip install -e ".[ml,api]"
 
 # 2. Run the end-to-end offline demo (synthetic data, no network):
 python -m flarecast.cli.main demo
+
+# 3. Launch the API + live dashboard (offline synthetic/cached data):
+flarecast serve            # then open http://127.0.0.1:8000/  (API docs at /docs)
 ```
+
+`flarecast serve` mounts the static dashboard (`dashboard/`) at `/` and exposes
+the O(1) read API under `/api/*` plus an SSE live feed at `/api/stream`. The
+dashboard is fully **offline and dependency-free** (vanilla JS on `<canvas>`,
+no CDN): dual soft+hard light curves with GOES A–X colour bands, a forecast
+probability gauge, a red alert banner on a nowcast/forecast trigger, and a
+recent-flares catalogue table.
 
 Optional capability bundles (see `pyproject.toml`):
 
 ```bash
+pip install -e .           # minimal offline core (numpy, pandas) — demo + core tests
 pip install -e ".[real]"   # live + archive data sources (astropy, sunpy, …)
 pip install -e ".[ml]"     # forecasters (lightgbm, scikit-learn, torch, onnx)
 pip install -e ".[api]"    # serving layer (fastapi, uvicorn)
@@ -65,7 +76,23 @@ pip install -e ".[dev]"    # tooling (pytest, ruff)
 ```
 
 > The offline core (`requirements.txt`) is intentionally tiny so the demo and
-> core tests run anywhere. Everything else is opt-in.
+> core tests run anywhere. Everything else is opt-in. The `demo` and
+> `examples/01`–`04` run on the core (numpy); `serve` and `examples/05` need
+> the `api` extra; the GBT forecaster uses the `ml` extra (it falls back to
+> baselines-only if absent).
+
+### Runnable examples
+
+Each script under `examples/` runs offline (no network, no credentials):
+
+| Example | What it shows |
+|---|---|
+| `examples/00_synth_demo.py` | Generate synthetic soft+hard light curves + a truth event list (pure stdlib). |
+| `examples/01_offline_demo.py` | Full pipeline: synth → dual-band detection → master catalogue → detected-vs-truth table. |
+| `examples/02_goes_live_nowcast.py` | GOES XRS nowcast via `GOESFetcher` (live → cached sample → synth fallback) → soft-band detection. |
+| `examples/03_fusion_demo.py` | Two synthetic SXR sources → LTT → inverse-variance + Kalman fusion → fused σ < single-source σ. |
+| `examples/04_train_forecast.py` | Labels → leakage-free CV → GBT + baselines → TSS/HSS/BSS/POD/FAR + lead-time & LT-vs-FAR sweep. |
+| `examples/05_serve_dashboard.py` | Seed the store + serve the API/dashboard; non-blocking self-check by default, `--serve` to run uvicorn. |
 
 ## Repository layout
 

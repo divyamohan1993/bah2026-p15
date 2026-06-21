@@ -165,7 +165,11 @@ class CatalogStore:
     __slots__ = ("_conn",)
 
     def __init__(self, db_path: str = ":memory:") -> None:
-        self._conn = sqlite3.connect(db_path)
+        # check_same_thread=False so the store can be read from FastAPI/uvicorn
+        # worker threads (the serving layer constructs the store in one thread
+        # and serves O(1) reads from the request threadpool -- Section 7.4). The
+        # serving layer serializes writes, so concurrent access stays safe.
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         cur = self._conn.cursor()
         cur.execute(_DDL)
