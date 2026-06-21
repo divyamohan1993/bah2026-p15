@@ -38,7 +38,7 @@ def dashboard_dir() -> str:
     return os.path.join(repo_root, "dashboard")
 
 
-def create_app(store: "ReadStore", forecaster: Any = None):
+def create_app(store: ReadStore, forecaster: Any = None):
     """Build the FlareCast FastAPI app bound to ``store`` (Appendix B.7).
 
     Parameters

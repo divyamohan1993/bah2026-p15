@@ -22,7 +22,8 @@ FastAPI / starlette are imported lazily inside :func:`make_sse_router`.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 from ..constants import NOWCAST_GRID_DT_S
 
@@ -120,7 +121,7 @@ def replay_events(
             )
 
 
-def make_sse_router(store: "ReadStore"):
+def make_sse_router(store: ReadStore):
     """Build the SSE :class:`fastapi.APIRouter` (``GET /api/stream``).
 
     Parameters

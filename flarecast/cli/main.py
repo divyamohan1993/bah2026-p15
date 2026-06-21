@@ -42,7 +42,6 @@ from typing import Any
 
 from ..constants import (
     FORECAST_DEFAULT_CLASS_THRESHOLD,
-    FORECAST_HORIZONS_MIN,
 )
 
 __all__ = ["main", "run_pipeline", "run_offline_pipeline"]
@@ -533,10 +532,9 @@ def _offline_forecast(
 
 def _kept_times(events, lc, horizon_min, class_threshold) -> list[float]:
     """Recompute the kept timestamps from the label builder (in-event masking)."""
-    from ..forecast.labels import build_labels_lists
-
     # Re-run the pure-python core but track times in lockstep.
     from ..forecast.features import _window_rows
+    from ..forecast.labels import build_labels_lists
 
     sxr, hxr, times = _window_rows(lc)
     # Reproduce the masking decision the builder makes so kept_t aligns with X.
@@ -608,7 +606,10 @@ def _full_series_probs(lc: dict, horizon_min: float) -> list[float]:
     from ..forecast.features import FeatureExtractor
 
     ex = FeatureExtractor()
-    rows = [ex.update(s, h, t, horizon_min) for s, h, t in zip(lc["sxr"], lc["hxr"], lc["t"])]
+    rows = [
+        ex.update(s, h, t, horizon_min)
+        for s, h, t in zip(lc["sxr"], lc["hxr"], lc["t"], strict=False)
+    ]
     pers = PersistenceBaseline(decayed=False)
     return [float(p) for p in pers.predict_proba(rows)]
 
@@ -866,7 +867,6 @@ def _do_ingest(args: argparse.Namespace) -> int:
 def _relabel_goes_as_synth(samples: list) -> list:
     """Map GOES long/short streams to the synth stream ids so the pivot works."""
     from ..synth.generator import STREAM_SXR_LONG, STREAM_SXR_SHORT
-    from ..types import FluxSample
 
     out: list = []
     for s in samples:
@@ -932,23 +932,31 @@ def _print_forecast_only(res: OfflinePipelineResult) -> None:
         print(f"model: not trained ({fs['model_error']})")
     if "baselines" in fs:
         b = fs["baselines"]
-        print(f"baselines: climatology TSS={b['climatology_tss']:+.3f}  persistence TSS={b['persistence_tss']:+.3f}")
+        print(
+            f"baselines: climatology TSS={b['climatology_tss']:+.3f}  "
+            f"persistence TSS={b['persistence_tss']:+.3f}"
+        )
     if "lead_time" in fs:
         lt = fs["lead_time"]
         mlt = lt["median_lt_min"]
         mlt_s = f"{mlt:.1f} min" if not math.isnan(mlt) else "n/a"
-        print(f"lead time: median={mlt_s}  TPR={lt['tpr']:.2f}  hits={lt['n_hit']} miss={lt['n_miss']}")
+        print(
+            f"lead time: median={mlt_s}  TPR={lt['tpr']:.2f}  "
+            f"hits={lt['n_hit']} miss={lt['n_miss']}"
+        )
     if "lt_vs_far" in fs and fs["lt_vs_far"]:
         print("LT-vs-FAR (theta -> median_lt[min], tpr, far):")
         for r in fs["lt_vs_far"]:
             mlt = r.get("median_lt")
             mlt_min = (mlt / 60.0) if (mlt is not None and not math.isnan(mlt)) else None
-            print(f"  theta={r['theta']:.2f}  LT={_fmt(mlt_min, '.1f')}m  TPR={r['tpr']:.2f}  FAR={r['far']:.2f}")
+            print(
+                f"  theta={r['theta']:.2f}  LT={_fmt(mlt_min, '.1f')}m  "
+                f"TPR={r['tpr']:.2f}  FAR={r['far']:.2f}"
+            )
 
 
 def _cmd_backtest(args: argparse.Namespace) -> int:
     """Run the evaluation battery + lead-time buckets on synthetic data."""
-    from ..forecast.evaluate import report
     from ..synth.generator import generate_flare_lightcurves
 
     samples, truth = generate_flare_lightcurves(

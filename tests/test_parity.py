@@ -31,8 +31,8 @@ import json
 import os
 
 import pytest
-
 from flarecast.constants import CUSUM_H, CUSUM_K_SLACK
+
 from tests.golden.generate_cusum_golden import (
     GOLDEN_PATH,
     PARITY_H,

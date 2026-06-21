@@ -24,7 +24,6 @@ Fixtures
 from __future__ import annotations
 
 import pytest
-
 from flarecast.catalog.schema import FlareEvent
 from flarecast.synth import generate_flare_lightcurves
 from flarecast.types import FluxSample

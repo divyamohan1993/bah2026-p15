@@ -28,7 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 __all__ = ["make_router"]
 
 
-def make_router(store: "ReadStore", forecaster: Any = None):
+def make_router(store: ReadStore, forecaster: Any = None):
     """Build the ``/api`` :class:`fastapi.APIRouter` bound to ``store``.
 
     Parameters
